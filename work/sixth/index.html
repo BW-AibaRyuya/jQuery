@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../../common/css/reset.css">
   <link rel="stylesheet" href="../../common/css/base.css">
   <link rel="stylesheet" href="./css/style.css">
-  <title>Document</title>
+  <title>ポケモン捕獲</title>
 </head>
 <body>
   <div class="wrapper" id="wrapper">
@@ -15,86 +15,91 @@
   </div>
   <script src="../../common/js/jquery.js"></script>
   <script>
-  $(function() {
+    $(function() {
 
-  let failHtml =
-  `
-    <p class="text">逃げられてしまった...</p>
-    <button class="btn mt" data-js="reset">戻る</button>
-  `;
+      const $wrapper = $('#wrapper');
 
-  let encountHtml =
-  `
-    <p class="name"></p>
-    <div>
-      <img class="img" src="" alt="">
-    </div>
-    <div>
-      <button class="btn" id="catch">捕まえる</button>
-      <button class="btn" data-js="reset">逃げる</button>
-    </div>
-  `;
+      // 「捕まえる」失敗時の画面表示
+      let failHtml = `
+        <p class="text">逃げられてしまった...</p>
+        <button class="btn mt" data-js="reset">戻る</button>
+      `;
+      // 「ポケモンを探す」後の画面表示
+      let encountHtml = `
+        <p class="name"></p>
+        <div>
+          <img class="img" src="" alt="">
+        </div>
+        <div>
+          <button class="btn" id="catch">捕まえる</button>
+          <button class="btn" data-js="reset">逃げる</button>
+        </div>
+      `;
+      // 「捕まえる」成功時の画面表示
+      let doneHtml = `
+        <p class="name">ゲットしました</p>
+        <div>
+          <img class="img" src="" alt="">
+        </div>
+        <button class="btn" data-js="reset">戻る</button>
+      `;
 
-  const $wrapper = $('#wrapper');
+      // 「ポケモンを探す」ボタン
+      $wrapper.on('click', '#pokemon_search', function() {
+        let randomId = Math.floor(Math.random() * 151) + 1;
 
-  // 「ポケモンを探す」
-  $wrapper.on('click', '#pokemon_search', function() {
-    let randomId = Math.floor(Math.random() * 151) + 1;
+        $.ajax({
+          url: `https://pokeapi.co/api/v2/pokemon/${randomId}`,
+          method: 'GET'
+        })
+        .done(function(res) {
+          // エンカウント画面を表示
+          $wrapper.html(encountHtml);
+          $wrapper.find('.img').attr('src', res.sprites.front_default);
 
-    $.ajax({
-      url: `https://pokeapi.co/api/v2/pokemon/${randomId}`,
-      method: 'GET'
-    })
-    .done(function(res) {
-      $wrapper.html(encountHtml);
-      $wrapper.find('.img').attr('src', res.sprites.front_default);
-
-      // 日本語名取得
-      $.ajax({
-        url: res.species.url,
-        method: 'GET'
-      })
-      .done(function(species) {
-        let nameJa = species.names.find(n => n.language.name === 'ja').name;
-        $wrapper.find('.name').text(nameJa);
+          // 日本語名を取得
+          $.ajax({
+            url: res.species.url,
+            method: 'GET'
+          })
+          .done(function(species) {
+            let nameJa = species.names.find(n => n.language.name === 'ja').name;
+            $wrapper.find('.name').text(nameJa);
+          });
+        })
+        .fail(function(err) {
+          console.error('ポケモン取得失敗', err);
+        });
       });
-    })
-    .fail(function(err) {
-      console.error('取得失敗', err);
+
+      // 「捕まえる」ボタン
+      $wrapper.on('click', '#catch', function() {
+        if (Math.random() < 0.5) {
+          // 成功 → モンスターボールをAjaxで取得して画像にセット
+          $.ajax({
+            url: 'https://pokeapi.co/api/v2/item/4', // モンスターボール
+            method: 'GET'
+          })
+          .done(function(item) {
+            $wrapper.html(doneHtml);
+            $wrapper.find('.img').attr('src', item.sprites.default);
+          })
+          .fail(function(err) {
+            console.error('モンスターボール取得失敗', err);
+            $wrapper.html(doneHtml);
+          });
+        } else {
+          // 失敗
+          $wrapper.html(failHtml);
+        }
+      });
+
+      // 「逃げる」「戻る」ボタン
+      $wrapper.on('click', '[data-js="reset"]', function() {
+        $wrapper.html('<button type="button" class="btn search-btn" id="pokemon_search">ポケモンを探す</button>');
+      });
+
     });
-  });
-
-  // 捕まえる
-  $wrapper.on('click', '#catch', function() {
-    if (Math.random() < 0.5) {
-      // 成功 → モンスターボールをAPIで取得
-      $.ajax({
-        url: 'https://pokeapi.co/api/v2/item/4', // モンスターボール
-        method: 'GET'
-      }).done(function(res) {
-        let ballImgUrl = res.sprites.default; // モンスターボールの画像URL
-        $wrapper.html(`
-          <p class="name">ゲットしました</p>
-          <div>
-            <img class="img" src="${ballImgUrl}" alt="Pokeball">
-          </div>
-          <button class="btn" data-js="reset">戻る</button>
-        `);
-      }).fail(function(err) {
-        console.error('モンスターボール取得失敗', err);
-      });
-    } else {
-      $wrapper.html(failHtml);
-    }
-  });
-
-  // 逃げる
-  $wrapper.on('click', '[data-js="reset"]', function() {
-    $wrapper.html('<button type="button" class="btn search-btn" id="pokemon_search">ポケモンを探す</button>');
-  });
-
-});  
-    // 回答はここに書いてね
   </script>
 </body>
 </html>
